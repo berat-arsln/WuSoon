@@ -413,6 +413,18 @@ window.addEventListener('error', function(e) {
   .filtre-bar::-webkit-scrollbar { display:none; }
   .filtre-chip { flex-shrink:0; padding:6px 14px; border-radius:20px; border:1px solid var(--siyah4); background:var(--siyah3); color:var(--gri-acik); font-size:12px; font-weight:700; cursor:pointer; font-family:'Nunito',sans-serif; transition:all .2s; }
   .filtre-chip.aktif { background:var(--kirmizi); border-color:var(--kirmizi); color:var(--beyaz); }
+  
+  .kaynak-chip-bar {
+  display:flex; gap:6px; padding:8px 16px 0;
+  overflow-x:auto; scrollbar-width:none;
+}
+.kaynak-chip-bar::-webkit-scrollbar { display:none; }
+.kaynak-chip { flex-shrink:0; padding:5px 12px; border-radius:16px;
+  background:var(--siyah4); color:var(--gri-acik); font-size:11px;
+  font-weight:900; cursor:pointer; border:1.5px solid transparent;
+  font-family:'Nunito',sans-serif; transition:all .2s; }
+.kaynak-chip.aktif { background:rgba(229,9,20,.15); border-color:var(--kirmizi); color:var(--beyaz); }
+
 </style>
 </head>
 <body>
@@ -472,6 +484,7 @@ window.addEventListener('error', function(e) {
   <div id="sekme-canli" class="sekme">
     <div style="padding-top:10px;">
       <div class="arama-bar acik"><input class="arama-input" type="text" placeholder="Kanal ara..." oninput="aramaYap(this.value,'canli')"></div>
+      <div class="kaynak-chip-bar" id="canliKaynakBar"></div>
       <div class="filtre-bar" id="canliFiltreler"></div>
       <div id="canliIcerik"></div>
     </div>
@@ -481,6 +494,7 @@ window.addEventListener('error', function(e) {
   <div id="sekme-film" class="sekme">
     <div style="padding-top:10px;">
       <div class="arama-bar acik"><input class="arama-input" type="text" placeholder="Film ara..." oninput="aramaYap(this.value,'film')"></div>
+<div class="kaynak-chip-bar" id="filmKaynakBar"></div>
       <div class="filtre-bar" id="filmFiltreler"></div>
       <div id="filmIcerik"></div>
     </div>
@@ -490,6 +504,7 @@ window.addEventListener('error', function(e) {
   <div id="sekme-dizi" class="sekme">
     <div style="padding-top:10px;">
       <div class="arama-bar acik"><input class="arama-input" type="text" placeholder="Dizi ara..." oninput="aramaYap(this.value,'dizi')"></div>
+      <div class="kaynak-chip-bar" id="diziKaynakBar"></div>
       <div class="filtre-bar" id="diziFiltreler"></div>
       <div id="diziIcerik"></div>
     </div>
@@ -766,16 +781,41 @@ function storeEkle(item) {
   return id;
 }
 function storeAl(id) { return icerikStore.get(id); }
-let veri = { profiller:[], aktifProfil:null, kaynaklar:[] };
-// Bellekte tutulan içerikler (localStorage'a sığmayabilir)
-let icerikler = { canli:[], film:[], dizi:[] };
+let veri = { profiller:[], aktifProfil:null };
+// { profilId: { kaynakId: {canli,film,dizi} } }
+const icerikCache = {};
 let aktifDetay = null;
+let aktifKaynakId = null; // null = tümü göster
 
 function veriYukle() {
   try { const k=localStorage.getItem('wusoon_v2'); if(k) veri=JSON.parse(k); } catch(e){}
 }
 function veriKaydet() {
   try { localStorage.setItem('wusoon_v2', JSON.stringify(veri)); } catch(e){}
+}
+
+function aktifProfil() {
+  return veri.profiller.find(p => p.id === veri.aktifProfil) || null;
+}
+function profilKaynaklar() {
+  const p = aktifProfil();
+  return p ? (p.kaynaklar || []) : [];
+}
+function profilIcerikler() {
+  const pid = veri.aktifProfil;
+  if(!pid || !icerikCache[pid]) return { canli:[], film:[], dizi:[] };
+  if(aktifKaynakId) {
+    const k = icerikCache[pid][aktifKaynakId] || { canli:[], film:[], dizi:[] };
+    return k;
+  }
+  // Tümü: tüm kaynakları birleştir
+  const sonuc = { canli:[], film:[], dizi:[] };
+  Object.values(icerikCache[pid]).forEach(k => {
+    sonuc.canli.push(...k.canli);
+    sonuc.film.push(...k.film);
+    sonuc.dizi.push(...k.dizi);
+  });
+  return sonuc;
 }
 
 // ═══════════════════════════════
@@ -789,7 +829,7 @@ window.addEventListener('DOMContentLoaded', () => {
     profilGuncelle();
     kaynaklarGuncelle();
     icerikEkraniGuncelle();
-    veri.kaynaklar.forEach(k => { if(k.yuklu) kaynakYukle(k.id, true); });
+    profilKaynaklar().forEach(k => { if(k.yuklu) kaynakYukle(k.id, true); });
   }, 1600);
 
   // Video event'leri
@@ -840,11 +880,28 @@ function profilEkleAc() { profilMenuKapat(); document.getElementById('profil-ad'
 function profilKaydet() {
   const ad = document.getElementById('profil-ad').value.trim();
   if(!ad){ toast('Profil adı giriniz.'); return; }
-  veri.profiller.push({ id:Date.now(), ad, renk:seciliRenk });
+  veri.profiller.push({ id:Date.now(), ad, renk:seciliRenk, kaynaklar:[] });
   if(!veri.aktifProfil) veri.aktifProfil = veri.profiller[0].id;
   veriKaydet(); profilGuncelle(); modalKapatId('profilModal'); toast(L('profilOlusturuldu'));
 }
-function profilSec(id) { veri.aktifProfil=id; veriKaydet(); profilGuncelle(); profilMenuKapat(); }
+function profilSec(id) {
+  veri.aktifProfil = id;
+  aktifKaynakId = null;
+  veriKaydet();
+  profilGuncelle();
+  kaynaklarGuncelle();
+  // Cache yoksa yükle, varsa direkt göster
+  profilKaynaklar().forEach(k => {
+    const pid = veri.aktifProfil;
+    if(k.yuklu && (!icerikCache[pid] || !icerikCache[pid][k.id])) {
+      kaynakYukle(k.id, true);
+    }
+  });
+  icerikEkraniGuncelle();
+  profilMenuKapat();
+}
+
+
 function profilGuncelle() {
   const aktif = veri.profiller.find(p=>p.id===veri.aktifProfil);
   const btn = document.getElementById('profilBtn');
@@ -865,6 +922,7 @@ function profilGuncelle() {
 // ═══════════════════════════════
 // KAYNAK YÖNETİMİ
 // ═══════════════════════════════
+
 function kaynakEkleAc() { modalAc('kaynakModal'); }
 function kaynakTabDegistir(id, el) {
   document.querySelectorAll('.modal-tab').forEach(t=>t.classList.remove('aktif'));
@@ -872,6 +930,8 @@ function kaynakTabDegistir(id, el) {
   el.classList.add('aktif');
   document.getElementById('tab-'+id).classList.add('aktif');
 }
+
+
 function kaynakKaydet(tip) {
   let kaynak = { id:Date.now(), tip, yuklu:false };
   if(tip==='m3u'){
@@ -887,27 +947,37 @@ function kaynakKaydet(tip) {
     if(!ad||!url||!user||!pass){ toast(L('zorunluAlan')); return; }
     Object.assign(kaynak,{ad,url,user,pass});
   }
-  veri.kaynaklar.push(kaynak);
-  veriKaydet(); kaynaklarGuncelle(); modalKapatId('kaynakModal');
-  toast(L('kaydetildi'));
-  kaynakYukle(kaynak.id, false);
+  
+  const p = aktifProfil();
+if(!p){ toast('Önce profil oluşturun.'); return; }
+if(!p.kaynaklar) p.kaynaklar = [];
+p.kaynaklar.push(kaynak);
+veriKaydet(); kaynaklarGuncelle(); modalKapatId('kaynakModal');
+toast(L('kaydetildi'));
+kaynakYukle(kaynak.id, false);
 }
+
+
 function kaynakSil(id) {
-  veri.kaynaklar = veri.kaynaklar.filter(k=>k.id!==id);
+  const p = aktifProfil();
+  if(!p) return;
+  p.kaynaklar = (p.kaynaklar||[]).filter(k=>k.id!==id);
+  const pid = veri.aktifProfil;
+  if(icerikCache[pid]) delete icerikCache[pid][id];
   veriKaydet(); kaynaklarGuncelle();
-  icerikler = { canli:[], film:[], dizi:[] };
-  // Kalan kaynakları tekrar yükle
-  veri.kaynaklar.forEach(k=>{ if(k.yuklu) kaynakYukle(k.id, true); });
   icerikEkraniGuncelle();
   toast('Kaynak silindi.');
 }
+
+
 function kaynaklarGuncelle() {
   const kart = document.getElementById('kaynaklarKart');
-  if(veri.kaynaklar.length===0){
+  const liste = profilKaynaklar();
+  if(liste.length===0){
     kart.innerHTML=`<div style="padding:16px;color:var(--gri);font-size:13px;text-align:center;">Henüz kaynak yok</div>`;
     return;
   }
-  kart.innerHTML = veri.kaynaklar.map(k=>{
+  kart.innerHTML = liste.map(k=>{
     const rc=k.tip==='m3u'?'rozet-m3u':k.tip==='stb'?'rozet-stb':'rozet-xtream';
     const ry=k.tip==='m3u'?'M3U':k.tip==='stb'?'STB':'XTREAM';
     const durum = k.yukluyor
@@ -1023,7 +1093,7 @@ async function proxyFetchJson(url) {
 // ═══════════════════════════════
 // M3U YÜKLEME
 // ═══════════════════════════════
-async function m3uYukle(kaynak) {
+async function m3uYukle(kaynak, hedef) {
   toast(`"${kaynak.ad}" çekiliyor...`);
   let text;
   try {
@@ -1044,9 +1114,9 @@ async function m3uYukle(kaynak) {
 
   if(toplam === 0) throw new Error('M3U okundu ama içerik bulunamadı');
 
-  icerikler.canli.push(...sonuc.canli);
-  icerikler.film.push(...sonuc.film);
-  icerikler.dizi.push(...sonuc.dizi);
+  hedef.canli.push(...sonuc.canli);
+  hedef.film.push(...sonuc.film);
+  hedef.dizi.push(...sonuc.dizi);
 
   return toplam;
 }
@@ -1054,7 +1124,7 @@ async function m3uYukle(kaynak) {
 // ═══════════════════════════════
 // XTREAM API YÜKLEME
 // ═══════════════════════════════
-async function xtreamYukle(kaynak) {
+async function xtreamYukle(kaynak, hedef) {
   const base = kaynak.url.replace(/\/$/, '');
   const auth = `username=${kaynak.user}&password=${kaynak.pass}`;
 
@@ -1062,7 +1132,7 @@ async function xtreamYukle(kaynak) {
   try {
     const kanallar = await proxyFetchJson(`${base}/player_api.php?${auth}&action=get_live_streams`);
     if(Array.isArray(kanallar)){
-      icerikler.canli.push(...kanallar.map(k=>({
+      hedef.canli.push(...kanallar.map(k=>({
         ad: k.name||'', logo: k.stream_icon||'', grup: k.category_name||'',
         url: `${base}/live/${kaynak.user}/${kaynak.pass}/${k.stream_id}.m3u8`,
         tip:'canli', streamId: k.stream_id
@@ -1074,7 +1144,7 @@ async function xtreamYukle(kaynak) {
   try {
     const filmler = await proxyFetchJson(`${base}/player_api.php?${auth}&action=get_vod_streams`);
     if(Array.isArray(filmler)){
-      icerikler.film.push(...filmler.map(f=>({
+      hedef.film.push(...filmler.map(f=>({
         ad: f.name||'', logo: f.stream_icon||f.cover||'', grup: f.category_name||'',
         url: `${base}/movie/${kaynak.user}/${kaynak.pass}/${f.stream_id}.${f.container_extension||'mp4'}`,
         tip:'film', streamId: f.stream_id,
@@ -1087,7 +1157,7 @@ async function xtreamYukle(kaynak) {
   try {
     const seriler = await proxyFetchJson(`${base}/player_api.php?${auth}&action=get_series`);
     if(Array.isArray(seriler)){
-      icerikler.dizi.push(...seriler.map(s=>({
+      hedef.dizi.push(...seriler.map(s=>({
         ad: s.name||'', logo: s.cover||'', grup: s.category_name||'',
         url: `${base}/series/${kaynak.user}/${kaynak.pass}/${s.series_id}`,
         tip:'dizi', seriesId: s.series_id,
@@ -1100,7 +1170,7 @@ async function xtreamYukle(kaynak) {
 // ═══════════════════════════════
 // STB / STALKER PORTAL YÜKLEME
 // ═══════════════════════════════
-async function stbYukle(kaynak) {
+async function stbYukle(kaynak, hedef) {
   const base = kaynak.url.replace(/\/$/, '');
   const mac = kaynak.mac;
 
@@ -1122,7 +1192,7 @@ async function stbYukle(kaynak) {
       `${base}/portal.php?action=get_ordered_list&type=itv&action=get_ordered_list&p=1&JsHttpRequest=1-xml`
     );
     const kanallar = data?.js?.data || [];
-    icerikler.canli.push(...kanallar.map(k=>({
+    hedef.canli.push(...kanallar.map(k=>({
       ad: k.name||'', logo: k.logo||'', grup: k.tv_genre_id||'',
       url: `${base}/ch/${k.id}`, tip:'canli', stbId: k.id
     })));
@@ -1134,7 +1204,7 @@ async function stbYukle(kaynak) {
       `${base}/portal.php?action=get_ordered_list&type=vod&p=1&JsHttpRequest=1-xml`
     );
     const vodlar = data?.js?.data || [];
-    icerikler.film.push(...vodlar.map(v=>({
+    hedef.film.push(...vodlar.map(v=>({
       ad: v.name||'', logo: v.screenshot_uri||'', grup: v.category_id||'',
       url: `${base}/vod/${v.id}`, tip:'film', stbId: v.id
     })));
@@ -1145,25 +1215,29 @@ async function stbYukle(kaynak) {
 // ANA YÜKLEME FONKSİYONU
 // ═══════════════════════════════
 async function kaynakYukle(id, sessiz=false) {
-  const kaynak = veri.kaynaklar.find(k=>k.id===id);
+  const kaynak = profilKaynaklar().find(k=>k.id===id);
   if(!kaynak || kaynak.yukluyor) return;
+
+  const pid = veri.aktifProfil;
+  if(!icerikCache[pid]) icerikCache[pid] = {};
 
   kaynak.yukluyor = true;
   kaynaklarGuncelle();
   if(!sessiz) toast(`"${kaynak.ad}" bağlanıyor...`);
 
   try {
-    let toplam = 0;
-    if(kaynak.tip==='m3u')     toplam = await m3uYukle(kaynak);
-    else if(kaynak.tip==='xtream') { await xtreamYukle(kaynak); toplam = icerikler.canli.length + icerikler.film.length + icerikler.dizi.length; }
-    else if(kaynak.tip==='stb')    { await stbYukle(kaynak);    toplam = icerikler.canli.length + icerikler.film.length + icerikler.dizi.length; }
+    const hedef = { canli:[], film:[], dizi:[] };
+    if(kaynak.tip==='m3u')        await m3uYukle(kaynak, hedef);
+    else if(kaynak.tip==='xtream') await xtreamYukle(kaynak, hedef);
+    else if(kaynak.tip==='stb')    await stbYukle(kaynak, hedef);
 
+    icerikCache[pid][id] = hedef;
+    const toplam = hedef.canli.length + hedef.film.length + hedef.dizi.length;
     kaynak.yuklu = true;
     toast(`✅ ${kaynak.ad}: ${toplam} içerik yüklendi`);
   } catch(err) {
     kaynak.yuklu = false;
     toast(`❌ ${kaynak.ad}: ${err.message}`);
-    console.error('Kaynak yükleme hatası:', err);
   } finally {
     kaynak.yukluyor = false;
     veriKaydet();
@@ -1172,20 +1246,38 @@ async function kaynakYukle(id, sessiz=false) {
   }
 }
 
+function kaynaklarChipGuncelle() {
+  const liste = profilKaynaklar().filter(k=>k.yuklu);
+  ['canliKaynakBar','filmKaynakBar','diziKaynakBar'].forEach(barId => {
+    const bar = document.getElementById(barId);
+    if(!bar) return;
+    if(liste.length <= 1) { bar.innerHTML=''; return; }
+    bar.innerHTML = `<button class="kaynak-chip ${!aktifKaynakId?'aktif':''}" onclick="kaynakChipSec(null)">Tümü</button>` +
+      liste.map(k=>`<button class="kaynak-chip ${aktifKaynakId===k.id?'aktif':''}" onclick="kaynakChipSec(${k.id})">${k.ad}</button>`).join('');
+  });
+}
+
+function kaynakChipSec(id) {
+  aktifKaynakId = id;
+  icerikEkraniGuncelle();
+}
+
 // ═══════════════════════════════
 // İÇERİK EKRANI
 // ═══════════════════════════════
 function icerikEkraniGuncelle() {
-  heroGuncelle();
-  anaSekmeGuncelle();
-  canliSekmeGuncelle();
-  filmSekmeGuncelle();
-  diziSekmeGuncelle();
+  const ic = profilIcerikler();
+  heroGuncelle(ic);
+  anaSekmeGuncelle(ic);
+  canliSekmeGuncelle(ic);
+  filmSekmeGuncelle(ic);
+  diziSekmeGuncelle(ic);
+  kaynaklarChipGuncelle();
 }
 
-function heroGuncelle() {
+function heroGuncelle(ic) {
   // Hero için rastgele bir içerik seç (film veya dizi öncelikli)
-  const havuz = [...icerikler.film, ...icerikler.dizi, ...icerikler.canli];
+  const havuz = [...ic.film, ...ic.dizi, ...ic.canli];
   if(havuz.length===0) return;
   const rastgele = havuz[Math.floor(Math.random()*Math.min(havuz.length,20))];
   if(!rastgele) return;
@@ -1201,9 +1293,9 @@ function heroGuncelle() {
   document.getElementById('heroOynatBtn').onclick = () => detayAc(rastgele);
 }
 
-function anaSekmeGuncelle() {
+function anaSekmeGuncelle(ic) {
   const alan = document.getElementById('icerikAlani');
-  const toplamIcerik = icerikler.canli.length + icerikler.film.length + icerikler.dizi.length;
+  const toplamIcerik = ic.canli.length + ic.film.length + ic.dizi.length;
   if(toplamIcerik===0){
     alan.innerHTML=`<div class="bos-durum">
       <div class="bos-durum-ikon">📡</div>
@@ -1214,9 +1306,9 @@ function anaSekmeGuncelle() {
     return;
   }
   let html = '';
-  if(icerikler.canli.length>0) html += kategoriHTML('📺 Canlı Kanallar', icerikler.canli.slice(0,20), 'canli');
-  if(icerikler.film.length>0) html += kategoriHTML('🎬 Filmler', icerikler.film.slice(0,20), 'film');
-  if(icerikler.dizi.length>0) html += kategoriHTML('🎭 Diziler', icerikler.dizi.slice(0,20), 'dizi');
+  if(ic.canli.length>0) html += kategoriHTML('📺 Canlı Kanallar', ic.canli.slice(0,20), 'canli');
+  if(ic.film.length>0) html += kategoriHTML('🎬 Filmler', ic.film.slice(0,20), 'film');
+  if(ic.dizi.length>0) html += kategoriHTML('🎭 Diziler', ic.dizi.slice(0,20), 'dizi');
   alan.innerHTML = html;
 }
 
@@ -1259,16 +1351,16 @@ function kartTikla(sid) {
   if(item) detayAc(item);
 }
 
-function canliSekmeGuncelle() {
+function canliSekmeGuncelle(ic) {
   const alan = document.getElementById('canliIcerik');
-  if(icerikler.canli.length===0){
+  if(ic.canli.length===0){
     alan.innerHTML=bosDurumHTML('📺','Canlı kanal yok','Bir kaynak ekleyip yükleyin.','canli');
     document.getElementById('canliFiltreler').innerHTML='';
     return;
   }
   // Kategorilere göre grupla
   const gruplar = {};
-  icerikler.canli.forEach(k=>{ const g=k.grup||'Diğer'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(k); });
+  ic.canli.forEach(k=>{ const g=k.grup||'Diğer'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(k); });
   const grupAdlari = Object.keys(gruplar);
   
   // Filtre chipleri
@@ -1283,15 +1375,15 @@ function canliSekmeGuncelle() {
   alan.innerHTML = html;
 }
 
-function filmSekmeGuncelle() {
+function filmSekmeGuncelle(ic) {
   const alan = document.getElementById('filmIcerik');
-  if(icerikler.film.length===0){
+  if(ic.film.length===0){
     alan.innerHTML=bosDurumHTML('🎬','Film bulunamadı','Bir kaynak ekleyip yükleyin.','film');
     document.getElementById('filmFiltreler').innerHTML='';
     return;
   }
   const gruplar = {};
-  icerikler.film.forEach(f=>{ const g=f.grup||'Filmler'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(f); });
+  ic.film.forEach(f=>{ const g=f.grup||'Filmler'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(f); });
   const grupAdlari = Object.keys(gruplar);
   
   const filtreler = document.getElementById('filmFiltreler');
@@ -1303,15 +1395,15 @@ function filmSekmeGuncelle() {
   alan.innerHTML = html;
 }
 
-function diziSekmeGuncelle() {
+function diziSekmeGuncelle(ic) {
   const alan = document.getElementById('diziIcerik');
-  if(icerikler.dizi.length===0){
+  if(ic.dizi.length===0){
     alan.innerHTML=bosDurumHTML('🎭','Dizi bulunamadı','Bir kaynak ekleyip yükleyin.','dizi');
     document.getElementById('diziFiltreler').innerHTML='';
     return;
   }
   const gruplar = {};
-  icerikler.dizi.forEach(d=>{ const g=d.grup||'Diziler'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(d); });
+  ic.dizi.forEach(d=>{ const g=d.grup||'Diziler'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(d); });
   const grupAdlari = Object.keys(gruplar);
 
   const filtreler = document.getElementById('diziFiltreler');
@@ -1338,36 +1430,36 @@ function bosDurumHTML(ikon, baslik, alt, sekme) {
 function canliFiltrele(grup, el) {
   chipAktif(el, 'canliFiltreler');
   const alan = document.getElementById('canliIcerik');
-  const liste = grup ? icerikler.canli.filter(k=>k.grup===grup) : icerikler.canli;
+const liste = grup ? profilIcerikler().canli.filter(k=>k.grup===grup) : profilIcerikler().canli;
   alan.innerHTML = grup
     ? kategoriHTML(grup, liste.slice(0,50), 'canli')
     : (() => {
         const gruplar={};
-        icerikler.canli.forEach(k=>{ const g=k.grup||'Diğer'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(k); });
+        profilIcerikler().canli.forEach(k=>{ const g=k.grup||'Diğer'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(k); });
         return Object.keys(gruplar).map(g=>kategoriHTML(g, gruplar[g].slice(0,30), 'canli')).join('');
       })();
 }
 function filmFiltrele(grup, el) {
   chipAktif(el, 'filmFiltreler');
   const alan = document.getElementById('filmIcerik');
-  const liste = grup ? icerikler.film.filter(f=>f.grup===grup) : icerikler.film;
+  const liste = grup ? profilIcerikler().film.filter(f=>f.grup===grup) : profilIcerikler().film;
   alan.innerHTML = grup
     ? kategoriHTML(grup, liste.slice(0,50), 'film')
     : (() => {
         const gruplar={};
-        icerikler.film.forEach(f=>{ const g=f.grup||'Filmler'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(f); });
+        profilIcerikler().film.forEach(f=>{ const g=f.grup||'Filmler'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(f); });
         return Object.keys(gruplar).map(g=>kategoriHTML(g, gruplar[g].slice(0,30), 'film')).join('');
       })();
 }
 function diziFiltrele(grup, el) {
   chipAktif(el, 'diziFiltreler');
   const alan = document.getElementById('diziIcerik');
-  const liste = grup ? icerikler.dizi.filter(d=>d.grup===grup) : icerikler.dizi;
+const liste = grup ? profilIcerikler().dizi.filter(d=>d.grup===grup) : profilIcerikler().dizi;
   alan.innerHTML = grup
     ? kategoriHTML(grup, liste.slice(0,50), 'dizi')
     : (() => {
         const gruplar={};
-        icerikler.dizi.forEach(d=>{ const g=d.grup||'Diziler'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(d); });
+        profilIcerikler().dizi.forEach(d=>{ const g=d.grup||'Diziler'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(d); });
         return Object.keys(gruplar).map(g=>kategoriHTML(g, gruplar[g].slice(0,30), 'dizi')).join('');
       })();
 }
@@ -1387,17 +1479,17 @@ function aramaToggle() {
 function aramaYap(q, sekme) {
   q = q.toLowerCase().trim();
   if(sekme==='canli'){
-    const filtrelenmis = q ? icerikler.canli.filter(k=>(k.ad||'').toLowerCase().includes(q)) : icerikler.canli;
+    const filtrelenmis = q ? profilIcerikler().canli.filter(k=>(k.ad||'').toLowerCase().includes(q)) : icerikler.canli;
     document.getElementById('canliIcerik').innerHTML = filtrelenmis.length
       ? kategoriHTML(`Sonuçlar (${filtrelenmis.length})`, filtrelenmis.slice(0,50), 'canli')
       : bosDurumHTML('🔍','Sonuç bulunamadı','Farklı bir arama deneyin.','canli');
   } else if(sekme==='film'){
-    const filtrelenmis = q ? icerikler.film.filter(f=>(f.ad||'').toLowerCase().includes(q)) : icerikler.film;
+    const filtrelenmis = q ? profilIcerikler().film.filter(f=>(f.ad||'').toLowerCase().includes(q)) : icerikler.film;
     document.getElementById('filmIcerik').innerHTML = filtrelenmis.length
       ? kategoriHTML(`Sonuçlar (${filtrelenmis.length})`, filtrelenmis.slice(0,50), 'film')
       : bosDurumHTML('🔍','Sonuç bulunamadı','Farklı bir arama deneyin.','film');
   } else if(sekme==='dizi'){
-    const filtrelenmis = q ? icerikler.dizi.filter(d=>(d.ad||'').toLowerCase().includes(q)) : icerikler.dizi;
+    const filtrelenmis = q ? profilIcerikler().dizi.filter(d=>(d.ad||'').toLowerCase().includes(q)) : icerikler.dizi;
     document.getElementById('diziIcerik').innerHTML = filtrelenmis.length
       ? kategoriHTML(`Sonuçlar (${filtrelenmis.length})`, filtrelenmis.slice(0,50), 'dizi')
       : bosDurumHTML('🔍','Sonuç bulunamadı','Farklı bir arama deneyin.','dizi');
@@ -1950,4 +2042,5 @@ function toast(mesaj) {
 }
 </script>
 </body>
-</html>
+  </html>
+  
