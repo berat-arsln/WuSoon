@@ -458,6 +458,21 @@ window.addEventListener('error', function(e) {
   </div>
 </div>
 
+<!-- ONAY MODALİ -->
+<div class="modal-overlay" id="onayModal" onclick="modalKapat('onayModal',event)">
+  <div class="modal-kart" style="max-height:auto;">
+    <div class="modal-tutac"></div>
+    <div style="padding:20px;">
+      <div style="font-size:17px;font-weight:900;margin-bottom:8px;" id="onayBaslik">Emin misin?</div>
+      <div style="font-size:13px;color:var(--gri);margin-bottom:20px;" id="onayAciklama"></div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="modalKapatId('onayModal')" style="flex:1;padding:12px;background:var(--siyah3);border:none;border-radius:8px;color:var(--beyaz);font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Vazgeç</button>
+        <button id="onayEvetBtn" style="flex:1;padding:12px;background:var(--kirmizi);border:none;border-radius:8px;color:var(--beyaz);font-family:'Nunito',sans-serif;font-size:14px;font-weight:900;cursor:pointer;">Evet, Sil</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ANA EKRAN -->
 <div id="anaEkran">
 
@@ -890,13 +905,6 @@ function profilSec(id) {
   veriKaydet();
   profilGuncelle();
   kaynaklarGuncelle();
-  // Cache yoksa yükle, varsa direkt göster
-  profilKaynaklar().forEach(k => {
-    const pid = veri.aktifProfil;
-    if(k.yuklu && (!icerikCache[pid] || !icerikCache[pid][k.id])) {
-      kaynakYukle(k.id, true);
-    }
-  });
   icerikEkraniGuncelle();
   profilMenuKapat();
 }
@@ -959,16 +967,31 @@ kaynakYukle(kaynak.id, false);
 
 
 function kaynakSil(id) {
-  const p = aktifProfil();
-  if(!p) return;
-  p.kaynaklar = (p.kaynaklar||[]).filter(k=>k.id!==id);
-  const pid = veri.aktifProfil;
-  if(icerikCache[pid]) delete icerikCache[pid][id];
-  veriKaydet(); kaynaklarGuncelle();
-  icerikEkraniGuncelle();
-  toast('Kaynak silindi.');
+  document.getElementById('onayBaslik').textContent = 'Kaynağı Sil';
+  const kaynak = profilKaynaklar().find(k=>k.id===id);
+  document.getElementById('onayAciklama').textContent = `"${kaynak?.ad}" kaynağını silmek istediğine emin misin?`;
+  document.getElementById('onayEvetBtn').onclick = () => {
+    modalKapatId('onayModal');
+    const p = aktifProfil();
+    if(!p) return;
+    p.kaynaklar = (p.kaynaklar||[]).filter(k=>k.id!==id);
+    const pid = veri.aktifProfil;
+    if(icerikCache[pid]) delete icerikCache[pid][id];
+    veriKaydet(); kaynaklarGuncelle();
+    icerikEkraniGuncelle();
+    toast('Kaynak silindi.');
+  };
+  modalAc('onayModal');
 }
 
+function kaynakGuncelle(id) {
+  const kaynak = profilKaynaklar().find(k=>k.id===id);
+  if(!kaynak) return;
+  const pid = veri.aktifProfil;
+  if(icerikCache[pid]) delete icerikCache[pid][id];
+  kaynak.yuklu = false;
+  kaynakYukle(id, false);
+}
 
 function kaynaklarGuncelle() {
   const kart = document.getElementById('kaynaklarKart');
@@ -989,6 +1012,7 @@ function kaynaklarGuncelle() {
       <span class="kaynak-tip-rozet ${rc}">${ry}</span>
       <span style="font-weight:700;font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${k.ad}</span>
       ${durum}
+     <button class="kaynak-yukle-btn" style="background:var(--siyah4);color:var(--gri-acik);margin-right:4px;" onclick="kaynakGuncelle(${k.id})">🔄</button>
       <button class="kaynak-sil-btn" onclick="kaynakSil(${k.id})">🗑</button>
     </div>`;
   }).join('');
@@ -2046,6 +2070,7 @@ function modalAc(id) { document.getElementById(id).classList.add('acik'); }
 function modalKapatId(id) { document.getElementById(id).classList.remove('acik'); }
 function modalKapat(id, e) { if(e.target.id===id) modalKapatId(id); }
 
+
 // ═══════════════════════════════
 // TOAST
 // ═══════════════════════════════
@@ -2057,6 +2082,8 @@ function toast(mesaj) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>{ el.style.display='none'; }, 3000);
 }
+
+
 </script>
 </body>
 </html>
