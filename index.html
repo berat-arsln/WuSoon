@@ -999,44 +999,49 @@ function kaynaklarGuncelle() {
 // ═══════════════════════════════
 function m3uCoz(text) {
   const canli=[], film=[], dizi=[];
-  const satirlar = text.split('\n');
+  // \r\n ve \r satır sonlarını normalize et
+  const satirlar = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
   let meta = null;
 
   for(let i=0; i<satirlar.length; i++){
     const satir = satirlar[i].trim();
+    if(!satir) continue;
+
     if(satir.startsWith('#EXTINF')){
       meta = {};
-      // tvg-name
-      const adMatch = satir.match(/tvg-name="([^"]*)"/i);
-      meta.ad = adMatch ? adMatch[1] : '';
-      // tvg-logo
+      const adMatch   = satir.match(/tvg-name="([^"]*)"/i);
       const logoMatch = satir.match(/tvg-logo="([^"]*)"/i);
-      meta.logo = logoMatch ? logoMatch[1] : '';
-      // group-title
       const grupMatch = satir.match(/group-title="([^"]*)"/i);
-      meta.grup = grupMatch ? grupMatch[1] : '';
-      // Virgülden sonraki ad
-      const virgulMatch = satir.match(/,(.+)$/);
-      if(virgulMatch) {
-        const virgulAd = virgulMatch[1].trim();
-        if(!meta.ad) meta.ad = virgulAd;
-      }
-    } else if(satir && !satir.startsWith('#') && meta){
-      meta.url = satir;
-      if(!meta.ad) meta.ad = satir.split('/').pop().split('.')[0];
+      meta.logo = logoMatch ? logoMatch[1].trim() : '';
+      meta.grup = grupMatch ? grupMatch[1].trim() : '';
+      // Ad: önce tvg-name, yoksa virgül sonrası
+      const virgulIdx = satir.lastIndexOf(',');
+      const virgulAd  = virgulIdx >= 0 ? satir.slice(virgulIdx+1).trim() : '';
+      meta.ad = (adMatch ? adMatch[1].trim() : '') || virgulAd || '';
+      continue;
+    }
 
-      // Kategori tespiti
+    // Yorum satırlarını atla ama meta'yı sıfırlama
+    if(satir.startsWith('#')) continue;
+
+    // URL satırı
+    if(meta){
+      meta.url = satir;
+      if(!meta.ad) meta.ad = satir.split('/').pop().split('?')[0].split('.')[0] || 'İsimsiz';
+
       const g = (meta.grup||'').toLowerCase();
       const a = (meta.ad||'').toLowerCase();
-      const dizi_regex = /s\d{1,2}e\d{1,2}|season|sezon|bolum|bölüm|episode/i;
+      const u = (meta.url||'').toLowerCase();
 
-      if(dizi_regex.test(a) || /series|dizi|serial/i.test(g)){
-        dizi.push({...meta, tip:'dizi'});
-      } else if(/vod|movie|film|sinema/i.test(g)){
-        film.push({...meta, tip:'film'});
-      } else {
-        canli.push({...meta, tip:'canli'});
-      }
+      const diziMi = /s\d{1,2}[\s._x-]?e\d{1,2}|season|sezon|b[oö]l[uü]m|episode|series/i.test(a)
+                  || /series|dizi|serial|show/i.test(g);
+      const filmMi = /vod|movie|film|sinema|cinema/i.test(g)
+                  || /\/movie\//i.test(u);
+
+      if(diziMi)       dizi.push({...meta, tip:'dizi'});
+      else if(filmMi)  film.push({...meta, tip:'film'});
+      else             canli.push({...meta, tip:'canli'});
+
       meta = null;
     }
   }
@@ -1095,29 +1100,41 @@ async function proxyFetchJson(url) {
 // ═══════════════════════════════
 async function m3uYukle(kaynak, hedef) {
   toast(`"${kaynak.ad}" çekiliyor...`);
-  let text;
-  try {
-    text = await proxyFetch(kaynak.url);
-  } catch(e) {
-    throw new Error('URL çekilemedi: ' + e.message);
+
+  // Orijinal URL + alternatif varyantlar
+  const urlVaryantlari = [kaynak.url];
+  const u = kaynak.url;
+  if(u.includes('type=m3u_plus')) {
+    urlVaryantlari.push(u.replace('type=m3u_plus','type=m3u'));
+    urlVaryantlari.push(u.replace('type=m3u_plus','type=m3u&output=ts'));
+    urlVaryantlari.push(u.replace('type=m3u_plus','type=m3u&output=m3u8'));
+  } else if(u.includes('type=m3u')) {
+    urlVaryantlari.push(u.replace('type=m3u','type=m3u_plus'));
+    urlVaryantlari.push(u.replace(/type=m3u[^&]*/,'type=m3u&output=ts'));
+  } else if(!u.includes('type=')) {
+    const ayrac = u.includes('?') ? '&' : '?';
+    urlVaryantlari.push(u + ayrac + 'type=m3u_plus');
+    urlVaryantlari.push(u + ayrac + 'type=m3u');
   }
 
-  if(!text) throw new Error('Boş yanıt geldi');
-
-  // #EXTM3U olmasa bile #EXTINF varsa çözmeye çalış
-  if(!text.includes('#EXTINF')) {
-    throw new Error(`Geçersiz M3U (${text.length} byte, "#EXTINF" bulunamadı)`);
+  let text = null;
+  let sonHata = '';
+  for(const varyant of urlVaryantlari) {
+    try {
+      const t = await proxyFetch(varyant);
+      if(t && t.includes('#EXTINF')) { text = t; break; }
+    } catch(e) { sonHata = e.message; }
   }
+
+  if(!text) throw new Error('M3U çekilemedi: ' + sonHata);
 
   const sonuc = m3uCoz(text);
   const toplam = sonuc.canli.length + sonuc.film.length + sonuc.dizi.length;
-
   if(toplam === 0) throw new Error('M3U okundu ama içerik bulunamadı');
 
   hedef.canli.push(...sonuc.canli);
   hedef.film.push(...sonuc.film);
   hedef.dizi.push(...sonuc.dizi);
-
   return toplam;
 }
 
@@ -2042,5 +2059,4 @@ function toast(mesaj) {
 }
 </script>
 </body>
-  </html>
-  
+</html>
