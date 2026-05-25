@@ -88,7 +88,14 @@ window.addEventListener('error', function(e) {
 
   /* KATEGORİ & KARTLAR */
   .kategori { margin:16px 0 8px; }
-  .kategori-baslik { font-size:16px; font-weight:900; padding:0 16px; margin-bottom:10px; }
+  
+  .kategori-ust { display:flex; align-items:center; justify-content:space-between; padding:0 16px; margin-bottom:10px; }
+.kategori-baslik { font-size:16px; font-weight:900; color:var(--beyaz); }
+.tumu-btn { background:none; border:none; color:var(--kirmizi); font-size:12px; font-weight:900; cursor:pointer; font-family:'Nunito',sans-serif; display:flex; align-items:center; gap:4px; white-space:nowrap; }
+.tumu-btn span { background:var(--siyah3); padding:2px 6px; border-radius:10px; color:var(--gri-acik); font-size:10px; }
+.fav-btn { position:absolute; top:5px; right:5px; background:rgba(0,0,0,.5); border:none; border-radius:50%; width:26px; height:26px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:2; }
+.fav-btn.aktif { background:rgba(229,9,20,.3); }
+
   .kartlar { display:flex; overflow-x:auto; gap:10px; padding:0 16px 8px; scrollbar-width:none; scroll-snap-type:x mandatory; }
   .kartlar::-webkit-scrollbar { display:none; }
   .kart { flex-shrink:0; width:110px; cursor:pointer; scroll-snap-align:start; transition:transform .2s; }
@@ -414,6 +421,13 @@ window.addEventListener('error', function(e) {
   .filtre-chip { flex-shrink:0; padding:6px 14px; border-radius:20px; border:1px solid var(--siyah4); background:var(--siyah3); color:var(--gri-acik); font-size:12px; font-weight:700; cursor:pointer; font-family:'Nunito',sans-serif; transition:all .2s; }
   .filtre-chip.aktif { background:var(--kirmizi); border-color:var(--kirmizi); color:var(--beyaz); }
   
+  .sarma-btn {
+  padding:12px 8px; background:var(--siyah3); border:2px solid var(--siyah4);
+  border-radius:8px; color:var(--gri-acik); font-size:14px; font-weight:700;
+  cursor:pointer; font-family:'Nunito',sans-serif; transition:all .2s;
+}
+.sarma-btn.aktif { background:rgba(229,9,20,.15); border-color:var(--kirmizi); color:var(--beyaz); }
+
   .kaynak-chip-bar {
   display:flex; gap:6px; padding:8px 16px 0;
   overflow-x:auto; scrollbar-width:none;
@@ -439,9 +453,10 @@ window.addEventListener('error', function(e) {
 <div id="header">
   <div class="header-logo">WuSoon</div>
   <div class="header-sag">
-    <button class="arama-btn" onclick="aramaToggle()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    </button>
+  <button class="arama-btn" id="anaAramaBtn" onclick="aramaToggle()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+</button>
+   
     <button class="profil-btn" id="profilBtn" onclick="profilMenuToggle()"><span id="profilHarf">?</span></button>
   </div>
 </div>
@@ -457,6 +472,25 @@ window.addEventListener('error', function(e) {
     </div>
   </div>
 </div>
+
+<!-- OYNATICI AYARLARI MODALİ -->
+<div class="modal-overlay" id="oynaticiAyarModal" onclick="modalKapat('oynaticiAyarModal',event)">
+  <div class="modal-kart">
+    <div class="modal-tutac"></div>
+    <div class="modal-baslik" style="padding:14px 20px 0;">Oynatıcı Ayarları</div>
+    <div style="padding:16px 20px;">
+      <div class="form-label" style="margin-bottom:12px;">İleri / Geri Sarma Süresi</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;" id="sarmaSecenekler">
+        <button class="sarma-btn" data-sn="5"   onclick="sarmaAyarla(5,this)">5 sn</button>
+        <button class="sarma-btn" data-sn="10"  onclick="sarmaAyarla(10,this)">10 sn</button>
+        <button class="sarma-btn" data-sn="20"  onclick="sarmaAyarla(20,this)">20 sn</button>
+        <button class="sarma-btn" data-sn="30"  onclick="sarmaAyarla(30,this)">30 sn</button>
+        <button class="sarma-btn" data-sn="60"  onclick="sarmaAyarla(60,this)">1 dk</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <!-- ONAY MODALİ -->
 <div class="modal-overlay" id="onayModal" onclick="modalKapat('onayModal',event)">
@@ -529,6 +563,7 @@ window.addEventListener('error', function(e) {
   <div id="sekme-ayarlar" class="sekme">
     <div class="ayarlar-bolum">
       <div class="ayarlar-baslik">Ayarlar</div>
+      
       <div class="ayarlar-grup-baslik">Kaynaklar</div>
       <div class="ayarlar-kart" id="kaynaklarKart"></div>
       <button class="btn-kaydet" style="margin-top:0;" onclick="kaynakEkleAc()">+ Kaynak Ekle</button>
@@ -542,7 +577,32 @@ window.addEventListener('error', function(e) {
           <div class="ayar-ok">›</div>
         </div>
       </div>
+      <div class="ayarlar-grup-baslik">Oynatıcı</div>
+      <div class="ayarlar-kart">
+        <div class="ayar-item" onclick="oynaticiAyarlariAc()">
+          <div class="ayar-item-sol">
+            <div class="ayar-ikon" style="background:rgba(229,9,20,.1);">▶</div>
+            <div>
+              <div class="ayar-item-ad">Oynatıcı Ayarları</div>
+              <div class="ayar-item-alt" id="sarmaAyarGoster">İleri/Geri: 10 sn</div>
+            </div>
+          </div>
+          <div class="ayar-ok">›</div>
+        </div>
+      </div>
       <div class="ayarlar-grup-baslik">Uygulama</div>
+      
+      <div class="ayar-item" onclick="favorilerAc()">
+          <div class="ayar-item-sol">
+            <div class="ayar-ikon" style="background:rgba(229,9,20,.1);">❤️</div>
+            <div>
+              <div class="ayar-item-ad">Favoriler</div>
+              <div class="ayar-item-alt" id="favoriSayisi">0 içerik</div>
+            </div>
+          </div>
+          <div class="ayar-ok">›</div>
+        </div>
+        
       <div class="ayarlar-kart">
         <div class="ayar-item">
           <div class="ayar-item-sol">
@@ -707,11 +767,11 @@ window.addEventListener('error', function(e) {
 
     <!-- Orta -->
     <div class="oy-orta">
-      <button class="oy-orta-btn" onclick="ileriGeri(-10)">
+      <button class="oy-orta-btn" onclick="ileriGeri(-1)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.65"/></svg>
       </button>
       <button class="oy-orta-btn oy-oynat-btn" id="oynatDurBtn" onclick="oynatDurdur()">▶</button>
-      <button class="oy-orta-btn" onclick="ileriGeri(10)">
+      <button class="oy-orta-btn" onclick="ileriGeri(1)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.65"/></svg>
       </button>
     </div>
@@ -809,9 +869,71 @@ function veriKaydet() {
   try { localStorage.setItem('wusoon_v2', JSON.stringify(veri)); } catch(e){}
 }
 
-function aktifProfil() {
-  return veri.profiller.find(p => p.id === veri.aktifProfil) || null;
+function profilFavoriler() {
+  const p = aktifProfil();
+  if(!p) return [];
+  return p.favoriler || [];
 }
+function favoriMi(url) {
+  return profilFavoriler().some(f => f.url === url);
+}
+function favoriToggle(url, item) {
+  const p = aktifProfil();
+  if(!p) return;
+  if(!p.favoriler) p.favoriler = [];
+  if(favoriMi(url)) {
+    p.favoriler = p.favoriler.filter(f => f.url !== url);
+    toast('💔 Favoriden çıkarıldı');
+  } else {
+    p.favoriler.unshift({ ...item, favEklendi: Date.now() });
+    toast('❤️ Favorilere eklendi');
+  }
+  veriKaydet();
+  icerikEkraniGuncelle();
+}
+function sonIzlenenEkle(item) {
+  const p = aktifProfil();
+  if(!p) return;
+  if(!p.sonIzlenen) p.sonIzlenen = [];
+  p.sonIzlenen = p.sonIzlenen.filter(s => s.url !== item.url);
+  p.sonIzlenen.unshift({ ...item, izlenmeZamani: Date.now() });
+  if(p.sonIzlenen.length > 30) p.sonIzlenen = p.sonIzlenen.slice(0, 30);
+  veriKaydet();
+}
+
+function favorilerAc() {
+  sekmeDegistir('ana');
+  setTimeout(() => {
+    const alan = document.getElementById('icerikAlani');
+    const favlar = profilFavoriler();
+    if(favlar.length === 0) {
+      alan.innerHTML = bosDurumHTML('❤️','Favori yok','İçeriklerin üzerindeki kalp ikonuna bas.','ana');
+      return;
+    }
+    const canliF = favlar.filter(f=>f.tip==='canli');
+    const filmF  = favlar.filter(f=>f.tip==='film');
+    const diziF  = favlar.filter(f=>f.tip==='dizi');
+    let html = `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">
+      <button onclick="icerikEkraniGuncelle()" style="background:none;border:none;color:var(--kirmizi);font-size:13px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;">← Geri</button>
+      <span style="font-weight:900;font-size:15px;">❤️ Favoriler</span>
+    </div>`;
+    if(canliF.length) html += kategoriHTML('Favori Kanallar', canliF.slice(0,15), 'canli', canliF);
+    if(filmF.length)  html += kategoriHTML('Favori Filmler',  filmF.slice(0,15),  'film',  filmF);
+    if(diziF.length)  html += kategoriHTML('Favori Diziler',  diziF.slice(0,15),  'dizi',  diziF);
+    alan.innerHTML = html;
+  }, 50);
+}
+
+function favoriSayisiGuncelle() {
+  const el = document.getElementById('favoriSayisi');
+  if(el) el.textContent = `${profilFavoriler().length} içerik`;
+}
+
+
+function aktifProfil() {
+	return veri.profiller.find(p => p.id === veri.aktifProfil) || null;
+}
+
 function profilKaynaklar() {
   const p = aktifProfil();
   return p ? (p.kaynaklar || []) : [];
@@ -838,6 +960,7 @@ function profilIcerikler() {
 // ═══════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   veriYukle();
+  try { const k=localStorage.getItem('wusoon_sarma'); if(k){ sarmaSniye=parseInt(k); const el=document.getElementById('sarmaAyarGoster'); if(el) el.textContent=`İleri/Geri: ${sarmaSniye<60?sarmaSniye+' sn':'1 dk'}`; } } catch(e){}
   setTimeout(() => {
     document.getElementById('yukleme').classList.add('gizle');
     setTimeout(() => document.getElementById('yukleme').style.display='none', 400);
@@ -873,6 +996,12 @@ function sekmeDegistir(id) {
   document.getElementById('sekme-'+id)?.classList.add('aktif');
   document.getElementById('altBtn-'+id)?.classList.add('aktif');
   profilMenuKapat();
+  // Arama butonu sadece ana sayfada görünsün
+  const aramaBtn = document.getElementById('anaAramaBtn');
+  if(aramaBtn) aramaBtn.style.display = id==='ana' ? 'flex' : 'none';
+  // Arama barını kapat
+  const bar = document.getElementById('aramaBar');
+  if(bar) bar.classList.remove('acik');
 }
 
 // ═══════════════════════════════
@@ -1314,6 +1443,7 @@ function icerikEkraniGuncelle() {
   filmSekmeGuncelle(ic);
   diziSekmeGuncelle(ic);
   kaynaklarChipGuncelle();
+  favoriSayisiGuncelle();
 }
 
 function heroGuncelle(ic) {
@@ -1347,32 +1477,53 @@ function anaSekmeGuncelle(ic) {
     return;
   }
   let html = '';
-  if(ic.canli.length>0) html += kategoriHTML('📺 Canlı Kanallar', ic.canli.slice(0,20), 'canli');
-  if(ic.film.length>0) html += kategoriHTML('🎬 Filmler', ic.film.slice(0,20), 'film');
-  if(ic.dizi.length>0) html += kategoriHTML('🎭 Diziler', ic.dizi.slice(0,20), 'dizi');
+  const p = aktifProfil();
+  // Son izlenenler
+  const sonIz = p?.sonIzlenen || [];
+  if(sonIz.length > 0) html += kategoriHTML('🕐 Son İzlenenler', sonIz.slice(0,15), sonIz[0]?.tip||'film', sonIz);
+  // Favoriler
+  const favlar = profilFavoriler();
+  if(favlar.length > 0) {
+    const canliF = favlar.filter(f=>f.tip==='canli');
+    const filmF  = favlar.filter(f=>f.tip==='film');
+    const diziF  = favlar.filter(f=>f.tip==='dizi');
+    if(canliF.length) html += kategoriHTML('❤️ Favori Kanallar', canliF.slice(0,15), 'canli', canliF);
+    if(filmF.length)  html += kategoriHTML('❤️ Favori Filmler',  filmF.slice(0,15),  'film',  filmF);
+    if(diziF.length)  html += kategoriHTML('❤️ Favori Diziler',  diziF.slice(0,15),  'dizi',  diziF);
+  }
+  // Son eklenenler
+  if(ic.canli.length) html += kategoriHTML('📺 Son Eklenen Kanallar', ic.canli.slice(0,15), 'canli', ic.canli);
+  if(ic.film.length)  html += kategoriHTML('🎬 Son Eklenen Filmler',  ic.film.slice(0,15),  'film',  ic.film);
+  if(ic.dizi.length)  html += kategoriHTML('🎭 Son Eklenen Diziler',  ic.dizi.slice(0,15),  'dizi',  ic.dizi);
   alan.innerHTML = html;
 }
 
-function kategoriHTML(baslik, liste, tip) {
+function kategoriHTML(baslik, liste, tip, tumListe) {
   const kartlar = liste.map(i => kartHTML(i, tip)).join('');
+  const tumuBtn = tumListe && tumListe.length > 15
+    ? `<button class="tumu-btn" onclick="tumuGor('${baslik}','${tip}',${JSON.stringify(tumListe).replace(/'/g,'&#39;')})">Tümünü Gör <span>${tumListe.length}</span></button>`
+    : '';
   return `<div class="kategori">
-    <div class="kategori-baslik">${baslik}</div>
+    <div class="kategori-ust">
+      <div class="kategori-baslik">${baslik}</div>
+      ${tumuBtn}
+    </div>
     <div class="kartlar">${kartlar}</div>
   </div>`;
 }
 
 function kartHTML(item, tip) {
   const sid = storeEkle(item);
-  const tikla = tip==='dizi'
-    ? `sezonSeciciAc('${sid}')`
-    : `kartTikla('${sid}')`;
+  const tikla = tip==='dizi' ? `sezonSeciciAc('${sid}')` : `kartTikla('${sid}')`;
+  const favIkon = `<button class="fav-btn ${favoriMi(item.url)?'aktif':''}" onclick="event.stopPropagation();favoriToggle('${item.url.replace(/'/g,"\\'")}',storeAl('${sid}'))">${favoriMi(item.url)?'❤️':'🤍'}</button>`;
 
   if(tip==='canli'){
     return `<div class="kart kart-canli" onclick="${tikla}">
       <div class="kart-poster">
-        ${item.logo ? `<img src="${item.logo}" onerror="this.style.display='none';this.nextSibling.style.display='flex'" loading="lazy">` : ''}
+        ${item.logo?`<img src="${item.logo}" onerror="this.style.display='none';this.nextSibling.style.display='flex'" loading="lazy">`:''}
         <div class="kart-poster-placeholder" ${item.logo?'style="display:none"':''}>📺</div>
         <div class="canli-rozet"><div class="canli-nokta"></div>CANLI</div>
+        ${favIkon}
       </div>
       <div class="kart-baslik">${item.ad||''}</div>
     </div>`;
@@ -1380,8 +1531,9 @@ function kartHTML(item, tip) {
   const emoji = tip==='film'?'🎬':'🎭';
   return `<div class="kart" onclick="${tikla}">
     <div class="kart-poster">
-      ${item.logo ? `<img src="${item.logo}" onerror="this.style.display='none';this.nextSibling.style.display='flex'" loading="lazy">` : ''}
+      ${item.logo?`<img src="${item.logo}" onerror="this.style.display='none';this.nextSibling.style.display='flex'" loading="lazy">`:''}
       <div class="kart-poster-placeholder" ${item.logo?'style="display:none"':''}>${emoji}</div>
+      ${favIkon}
     </div>
     <div class="kart-baslik">${item.ad||''}</div>
   </div>`;
@@ -1391,6 +1543,25 @@ function kartTikla(sid) {
   const item = storeAl(sid);
   if(item) detayAc(item);
 }
+
+function tumuGor(baslik, tip, liste) {
+  // Aktif sekmedeki içerik alanını bul
+  const alanId = tip==='canli'?'canliIcerik':tip==='film'?'filmIcerik':'diziIcerik';
+  // Sekmeye geç
+  sekmeDegistir(tip==='canli'?'canli':tip==='film'?'film':'dizi');
+  setTimeout(() => {
+    const alan = document.getElementById(alanId);
+    if(!alan) return;
+    alan.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;">
+        <button onclick="icerikEkraniGuncelle();sekmeDegistir('${tip==='canli'?'canli':tip==='film'?'film':'dizi'}')" style="background:none;border:none;color:var(--kirmizi);font-size:13px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;">← Geri</button>
+        <span style="font-weight:900;font-size:15px;">${baslik}</span>
+        <span style="color:var(--gri);font-size:12px;">${liste.length} içerik</span>
+      </div>
+      ${kategoriHTML(baslik, liste, tip)}`;
+  }, 50);
+}
+
 
 function canliSekmeGuncelle(ic) {
   const alan = document.getElementById('canliIcerik');
@@ -1411,7 +1582,7 @@ function canliSekmeGuncelle(ic) {
 
   let html = '';
   grupAdlari.forEach(g=>{
-    html += kategoriHTML(g, gruplar[g].slice(0,30), 'canli');
+    html += kategoriHTML(g, gruplar[g].slice(0,15), 'canli', gruplar[g]);
   });
   alan.innerHTML = html;
 }
@@ -1432,7 +1603,8 @@ function filmSekmeGuncelle(ic) {
     grupAdlari.slice(0,10).map(g=>`<button class="filtre-chip" onclick="filmFiltrele('${g}',this)">${g}</button>`).join('');
 
   let html = '';
-  grupAdlari.forEach(g=>{ html += kategoriHTML(g, gruplar[g].slice(0,30), 'film'); });
+  grupAdlari.forEach(g=>{ 
+html += kategoriHTML(g, gruplar[g].slice(0,15), 'film', gruplar[g]); });
   alan.innerHTML = html;
 }
 
@@ -1452,7 +1624,8 @@ function diziSekmeGuncelle(ic) {
     grupAdlari.slice(0,10).map(g=>`<button class="filtre-chip" onclick="diziFiltrele('${g}',this)">${g}</button>`).join('');
 
   let html = '';
-  grupAdlari.forEach(g=>{ html += kategoriHTML(g, gruplar[g].slice(0,30), 'dizi'); });
+  grupAdlari.forEach(g=>{ 
+html += kategoriHTML(g, gruplar[g].slice(0,15), 'dizi', gruplar[g]); });
   alan.innerHTML = html;
 }
 
@@ -1473,7 +1646,7 @@ function canliFiltrele(grup, el) {
   const alan = document.getElementById('canliIcerik');
 const liste = grup ? profilIcerikler().canli.filter(k=>k.grup===grup) : profilIcerikler().canli;
   alan.innerHTML = grup
-    ? kategoriHTML(grup, liste.slice(0,50), 'canli')
+    ? kategoriHTML(grup, liste.slice(0,15), 'canli', liste)
     : (() => {
         const gruplar={};
         profilIcerikler().canli.forEach(k=>{ const g=k.grup||'Diğer'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(k); });
@@ -1485,7 +1658,7 @@ function filmFiltrele(grup, el) {
   const alan = document.getElementById('filmIcerik');
   const liste = grup ? profilIcerikler().film.filter(f=>f.grup===grup) : profilIcerikler().film;
   alan.innerHTML = grup
-    ? kategoriHTML(grup, liste.slice(0,50), 'film')
+    ? kategoriHTML(grup, liste.slice(0,15), 'film', liste)
     : (() => {
         const gruplar={};
         profilIcerikler().film.forEach(f=>{ const g=f.grup||'Filmler'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(f); });
@@ -1497,7 +1670,7 @@ function diziFiltrele(grup, el) {
   const alan = document.getElementById('diziIcerik');
 const liste = grup ? profilIcerikler().dizi.filter(d=>d.grup===grup) : profilIcerikler().dizi;
   alan.innerHTML = grup
-    ? kategoriHTML(grup, liste.slice(0,50), 'dizi')
+    ? kategoriHTML(grup, liste.slice(0,15), 'dizi', liste)
     : (() => {
         const gruplar={};
         profilIcerikler().dizi.forEach(d=>{ const g=d.grup||'Diziler'; if(!gruplar[g]) gruplar[g]=[]; gruplar[g].push(d); });
@@ -1519,6 +1692,21 @@ function aramaToggle() {
 }
 function aramaYap(q, sekme) {
   q = q.toLowerCase().trim();
+  if(sekme==='ana'){
+    const ic = profilIcerikler();
+    const alan = document.getElementById('icerikAlani');
+    if(!q){ icerikEkraniGuncelle(); return; }
+    const canli = ic.canli.filter(k=>(k.ad||'').toLowerCase().includes(q));
+    const filmler = ic.film.filter(f=>(f.ad||'').toLowerCase().includes(q));
+    const diziler = ic.dizi.filter(d=>(d.ad||'').toLowerCase().includes(q));
+    let html = '';
+    if(canli.length)  html += kategoriHTML(`📺 Kanallar (${canli.length})`, canli.slice(0,20), 'canli');
+    if(filmler.length) html += kategoriHTML(`🎬 Filmler (${filmler.length})`, filmler.slice(0,20), 'film');
+    if(diziler.length) html += kategoriHTML(`🎭 Diziler (${diziler.length})`, diziler.slice(0,20), 'dizi');
+    if(!html) html = bosDurumHTML('🔍','Sonuç bulunamadı','Farklı bir arama deneyin.','ana');
+    alan.innerHTML = html;
+    return;
+  }
   if(sekme==='canli'){
     const filtrelenmis = q ? profilIcerikler().canli.filter(k=>(k.ad||'').toLowerCase().includes(q)) : icerikler.canli;
     document.getElementById('canliIcerik').innerHTML = filtrelenmis.length
@@ -1713,6 +1901,7 @@ function detayKapat() {
 // ═══════════════════════════════════════════
 // VİDEO OYNATICI — AŞAMA 3
 // ═══════════════════════════════════════════
+let sarmaSniye = 10; // Varsayılan
 let hls = null;
 let kontrolTimer = null;
 let aktifKalite = -1; // -1 = otomatik
@@ -1745,6 +1934,9 @@ function oynaticiAc(item) {
   panel.classList.add('acik');
   document.body.style.overflow = 'hidden';
   spinnerGoster(true);
+
+
+sonIzlenenEkle(item);
 
   // Kısa gecikme sonrası yükle (DOM hazır olsun)
   setTimeout(() => videoYukle(item.url), 100);
@@ -1854,11 +2046,35 @@ function oynatDurdur() {
   }
 }
 
-// ── İleri / Geri ──
-function ileriGeri(saniye) {
+// ── İleri / Geri Sarma ──
+function ileriGeri(yon) {
   const video = document.getElementById('oynaticiVideo');
-  video.currentTime = Math.max(0, video.currentTime + saniye);
+  video.currentTime = Math.max(0, video.currentTime + (yon * sarmaSniye));
 }
+
+function sarmaAyarla(sn, el) {
+  sarmaSniye = sn;
+  document.querySelectorAll('.sarma-btn').forEach(b => b.classList.remove('aktif'));
+  el.classList.add('aktif');
+  const goster = document.getElementById('sarmaAyarGoster');
+  if(goster) goster.textContent = `İleri/Geri: ${sn < 60 ? sn+' sn' : '1 dk'}`;
+  // localStorage'a kaydet
+  try { localStorage.setItem('wusoon_sarma', sn); } catch(e){}
+}
+
+function oynaticiAyarlariAc() {
+  // Kayıtlı değeri yükle
+  try {
+    const k = localStorage.getItem('wusoon_sarma');
+    if(k) sarmaSniye = parseInt(k);
+  } catch(e){}
+  // Aktif butonu işaretle
+  document.querySelectorAll('.sarma-btn').forEach(b => {
+    b.classList.toggle('aktif', parseInt(b.dataset.sn) === sarmaSniye);
+  });
+  modalAc('oynaticiAyarModal');
+}
+
 
 // ── Ses ayarla ──
 function sesAyarla(deger) {
