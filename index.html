@@ -73,18 +73,25 @@ window.addEventListener('error', function(e) {
   .sekme.aktif { display:block; }
 
   /* HERO */
-  .hero { position:relative; width:100%; height:52vw; max-height:380px; min-height:220px; overflow:hidden; }
-  .hero-bg { position:absolute; inset:0; background-size:cover; background-position:center top; transition:opacity .5s; }
+  .hero-slider { position:relative; width:100%; height:52vw; max-height:380px; min-height:220px; overflow:hidden; }
+  .hero-slider-track { display:flex; height:100%; transition:transform .4s ease; }
+  .hero-item { flex-shrink:0; width:100%; height:100%; position:relative; }
+  .hero-bg { position:absolute; inset:0; background-size:cover; background-position:center top; }
   .hero-bg-overlay { position:absolute; inset:0; background:linear-gradient(to right,rgba(10,10,10,.9) 0%,rgba(10,10,10,.3) 60%,transparent 100%); }
   .hero-alti { position:absolute; bottom:0; left:0; right:0; height:60%; background:linear-gradient(to bottom,transparent,var(--siyah)); }
-  .hero-icerik { position:absolute; bottom:20px; left:16px; right:16px; }
-  .hero-baslik { font-family:'Bebas Neue',sans-serif; font-size:36px; letter-spacing:2px; line-height:1; text-shadow:0 2px 8px rgba(0,0,0,.8); margin-bottom:6px; }
-  .hero-meta { display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:12px; color:var(--gri-acik); flex-wrap:wrap; }
+  .hero-icerik { position:absolute; bottom:20px; left:16px; right:120px; }
+  .hero-baslik { font-family:'Bebas Neue',sans-serif; font-size:30px; letter-spacing:2px; line-height:1.1; text-shadow:0 2px 8px rgba(0,0,0,.8); margin-bottom:6px; max-height:72px; overflow:hidden; }
+  .hero-meta { display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:11px; color:var(--gri-acik); flex-wrap:wrap; }
   .hero-puan { color:#46D369; font-weight:700; }
   .hero-tip-rozet { background:var(--kirmizi); color:var(--beyaz); font-size:9px; font-weight:900; padding:2px 6px; border-radius:3px; }
-  .hero-butonlar { display:flex; gap:10px; }
-  .btn-oynat { display:flex; align-items:center; gap:6px; background:var(--beyaz); color:var(--siyah); border:none; border-radius:4px; padding:9px 20px; font-weight:900; font-size:14px; cursor:pointer; font-family:'Nunito',sans-serif; }
-  .btn-bilgi { display:flex; align-items:center; gap:6px; background:rgba(109,109,110,.7); color:var(--beyaz); border:none; border-radius:4px; padding:9px 20px; font-weight:700; font-size:14px; cursor:pointer; font-family:'Nunito',sans-serif; }
+  .hero-butonlar { display:flex; gap:8px; flex-wrap:wrap; }
+  .btn-oynat { display:flex; align-items:center; gap:6px; background:var(--beyaz); color:var(--siyah); border:none; border-radius:4px; padding:8px 16px; font-weight:900; font-size:13px; cursor:pointer; font-family:'Nunito',sans-serif; }
+  .btn-indir-hero { display:flex; align-items:center; gap:5px; background:rgba(255,255,255,.15); color:var(--beyaz); border:none; border-radius:4px; padding:8px 12px; font-weight:700; font-size:13px; cursor:pointer; font-family:'Nunito',sans-serif; backdrop-filter:blur(4px); }
+  .btn-fav-hero { display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.15); color:var(--beyaz); border:none; border-radius:4px; width:36px; height:36px; font-size:18px; cursor:pointer; backdrop-filter:blur(4px); }
+  .hero-kucuk-poster { position:absolute; right:12px; bottom:20px; width:80px; height:110px; border-radius:8px; object-fit:cover; box-shadow:0 4px 20px rgba(0,0,0,.6); }
+  .hero-dots { position:absolute; bottom:6px; left:50%; transform:translateX(-50%); display:flex; gap:5px; z-index:5; }
+  .hero-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.4); cursor:pointer; transition:all .2s; }
+  .hero-dot.aktif { background:var(--beyaz); width:18px; border-radius:3px; }
 
   /* KATEGORİ & KARTLAR */
   .kategori { margin:16px 0 8px; }
@@ -95,6 +102,7 @@ window.addEventListener('error', function(e) {
 .tumu-btn span { background:var(--siyah3); padding:2px 6px; border-radius:10px; color:var(--gri-acik); font-size:10px; }
 .fav-btn { position:absolute; top:5px; right:5px; background:rgba(0,0,0,.5); border:none; border-radius:50%; width:26px; height:26px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:2; }
 .fav-btn.aktif { background:rgba(229,9,20,.3); }
+.liste-btn { position:absolute; top:5px; left:5px; background:rgba(0,0,0,.5); border:none; border-radius:50%; width:26px; height:26px; font-size:16px; font-weight:900; color:var(--beyaz); cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:2; }
 
   .kartlar { display:flex; overflow-x:auto; gap:10px; padding:0 16px 8px; scrollbar-width:none; scroll-snap-type:x mandatory; }
   .kartlar::-webkit-scrollbar { display:none; }
@@ -512,7 +520,8 @@ window.addEventListener('error', function(e) {
     <div class="modal-tutac"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px 0;">
       <div class="modal-baslik" style="padding:0;">İndirilenler</div>
-      <button onclick="tumIndirilenlerSil()" style="background:none;border:none;color:var(--kirmizi);font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Tümünü Sil</button>
+      <button onclick="toast('Telefon indirmeler klasöründen silebilirsin.')" 
+style="background:none;border:none;color:var(--kirmizi);font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;">Tümünü Sil</button>
     </div>
     <div id="indirilenlerListesi" style="overflow-y:auto;max-height:72vh;padding:8px 0 16px;"></div>
   </div>
@@ -524,6 +533,21 @@ window.addEventListener('error', function(e) {
     <div class="modal-tutac"></div>
     <div class="modal-baslik" style="padding:14px 20px 0;">İndirme Kuyruğu</div>
     <div id="kuyrukListesi" style="overflow-y:auto;max-height:72vh;padding:8px 0 16px;"></div>
+  </div>
+</div>
+
+<!-- OYNATMA LİSTESİ MODALİ -->
+<div class="modal-overlay" id="listeModal" onclick="modalKapat('listeModal',event)">
+  <div class="modal-kart">
+    <div class="modal-tutac"></div>
+    <div class="modal-baslik" style="padding:14px 20px 0;">Listeye Ekle</div>
+    <div id="listeSecenekleri" style="padding:12px 20px 0;max-height:50vh;overflow-y:auto;"></div>
+    <div style="padding:12px 20px 16px;">
+      <div style="display:flex;gap:8px;">
+        <input class="form-input" id="yeniListeAd" placeholder="Yeni liste adı..." style="flex:1;">
+        <button onclick="yeniListeOlusturVeEkle()" style="background:var(--kirmizi);border:none;border-radius:8px;color:var(--beyaz);padding:0 16px;font-size:20px;cursor:pointer;">+</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -548,18 +572,9 @@ window.addEventListener('error', function(e) {
   <!-- ANA SEKME -->
   <div id="sekme-ana" class="sekme aktif">
     <div class="arama-bar" id="aramaBar"><input class="arama-input" type="text" placeholder="Film, dizi veya kanal ara..." oninput="aramaYap(this.value,'ana')"></div>
-    <div class="hero" id="heroAlani">
-      <div class="hero-bg" id="heroBg" style="background:linear-gradient(135deg,#1a0505,#2d0d0d);"></div>
-      <div class="hero-bg-overlay"></div>
-      <div class="hero-alti"></div>
-      <div class="hero-icerik">
-        <div class="hero-baslik" id="heroBaslik">WuSoon'a Hoş Geldin</div>
-        <div class="hero-meta"><span class="hero-puan" id="heroPuan">Kaynak Ekle</span><span id="heroMeta2">Ayarlar &gt; Kaynaklar</span></div>
-        <div class="hero-butonlar">
-          <button class="btn-oynat" id="heroOynatBtn" onclick="sekmeDegistir('ayarlar')">▶ Başla</button>
-          <button class="btn-bilgi" onclick="sekmeDegistir('ayarlar')">⚙ Kaynaklar</button>
-        </div>
-      </div>
+    <div class="hero-slider" id="heroSlider">
+      <div class="hero-slider-track" id="heroTrack"></div>
+      <div class="hero-dots" id="heroDots"></div>
     </div>
     <div id="icerikAlani"></div>
   </div>
@@ -631,7 +646,7 @@ window.addEventListener('error', function(e) {
             <div class="ayar-ikon" style="background:rgba(229,9,20,.1);">📥</div>
             <div>
               <div class="ayar-item-ad">İndirme Kuyruğu</div>
-              <div class="ayar-item-alt" id="kuyrukSayisi">0 bekliyor</div>
+              <div class="ayar-item-alt" id="kuyrukSayisi">APK sürümünde aktif</div>
             </div>
           </div>
           <div class="ayar-ok">›</div>
@@ -972,6 +987,81 @@ function sonIzlenenEkle(item) {
   veriKaydet();
 }
 
+function profilListeler() {
+  const p = aktifProfil();
+  if(!p) return [];
+  return p.oynatmaListeleri || [];
+}
+function listeOlustur(ad) {
+  const p = aktifProfil();
+  if(!p) return null;
+  if(!p.oynatmaListeleri) p.oynatmaListeleri = [];
+  const liste = { id:Date.now(), ad, icerikler:[] };
+  p.oynatmaListeleri.push(liste);
+  veriKaydet();
+  return liste;
+}
+function listeIcerikEkle(listeId, item) {
+  const p = aktifProfil();
+  if(!p||!p.oynatmaListeleri) return;
+  const liste = p.oynatmaListeleri.find(l=>l.id===listeId);
+  if(!liste) return;
+  if(liste.icerikler.find(i=>i.url===item.url)){ toast('Zaten listede.'); return; }
+  liste.icerikler.push(item);
+  veriKaydet();
+  toast(`✅ "${liste.ad}" listesine eklendi`);
+}
+function listeSil(listeId) {
+  const p = aktifProfil();
+  if(!p) return;
+  p.oynatmaListeleri = (p.oynatmaListeleri||[]).filter(l=>l.id!==listeId);
+  veriKaydet();
+  icerikEkraniGuncelle();
+}
+
+function listeSilOnay(listeId) {
+  const liste = profilListeler().find(l=>l.id===listeId);
+  if(!liste) return;
+  document.getElementById('onayBaslik').textContent = 'Listeyi Sil';
+  document.getElementById('onayAciklama').textContent = `"${liste.ad}" listesini silmek istediğine emin misin?`;
+  document.getElementById('onayEvetBtn').onclick = () => { modalKapatId('onayModal'); listeSil(listeId); };
+  modalAc('onayModal');
+}
+
+let aktifListeItem = null;
+function listeModalAc(sid) {
+  aktifListeItem = storeAl(sid);
+  if(!aktifListeItem) return;
+  document.getElementById('yeniListeAd').value = '';
+  const listeler = profilListeler();
+  const alan = document.getElementById('listeSecenekleri');
+  if(listeler.length === 0) {
+    alan.innerHTML = `<div style="color:var(--gri);font-size:13px;padding-bottom:8px;">Henüz liste yok. Aşağıdan oluştur.</div>`;
+  } else {
+    alan.innerHTML = listeler.map(l => `
+      <div class="ayar-item" style="padding:10px 0;" onclick="listeIcerikEkle(${l.id},aktifListeItem);modalKapatId('listeModal')">
+        <div class="ayar-item-sol">
+          <div style="font-size:20px;">📋</div>
+          <div>
+            <div class="ayar-item-ad">${l.ad}</div>
+            <div class="ayar-item-alt">${l.icerikler.length} içerik</div>
+          </div>
+        </div>
+        <div style="color:var(--kirmizi);font-size:20px;">+</div>
+      </div>`).join('');
+  }
+  modalAc('listeModal');
+}
+function yeniListeOlusturVeEkle() {
+  const ad = document.getElementById('yeniListeAd').value.trim();
+  if(!ad){ toast('Liste adı giriniz.'); return; }
+  const liste = listeOlustur(ad);
+  if(aktifListeItem) listeIcerikEkle(liste.id, aktifListeItem);
+  modalKapatId('listeModal');
+  icerikEkraniGuncelle();
+}
+
+
 function favorilerAc() {
   sekmeDegistir('ana');
   setTimeout(() => {
@@ -1058,7 +1148,8 @@ window.addEventListener('DOMContentLoaded', () => {
   video.addEventListener('pause',   () => document.getElementById('oynatDurBtn').textContent = '▶');
   video.addEventListener('play',    () => document.getElementById('oynatDurBtn').textContent = '⏸');
 });
-indirilenSayisiGuncelle();
+const el = document.getElementById('indirilenSayisi');
+  if(el) el.textContent = 'Telefon indirmeler klasörü';
 
 // ═══════════════════════════════
 // SEKME
@@ -1521,22 +1612,97 @@ storeIdx = 0;
   favoriSayisiGuncelle();
 }
 
-function heroGuncelle(ic) {
-  // Hero için rastgele bir içerik seç (film veya dizi öncelikli)
-  const havuz = [...ic.film, ...ic.dizi, ...ic.canli];
-  if(havuz.length===0) return;
-  const rastgele = havuz[Math.floor(Math.random()*Math.min(havuz.length,20))];
-  if(!rastgele) return;
+let heroIndex = 0;
+let heroTimer = null;
+let heroItems = [];
 
-  const heroBg = document.getElementById('heroBg');
-  if(rastgele.logo) {
-    heroBg.style.backgroundImage = `url('${rastgele.logo}')`;
-    heroBg.style.filter = 'brightness(0.4)';
+function heroGuncelle(ic) {
+  const havuz = [...ic.film.slice(0,30), ...ic.dizi.slice(0,20)];
+  if(havuz.length === 0) {
+    document.getElementById('heroSlider').innerHTML = `
+      <div class="hero-item">
+        <div class="hero-bg" style="background:linear-gradient(135deg,#1a0505,#2d0d0d);"></div>
+        <div class="hero-alti"></div>
+        <div class="hero-icerik">
+          <div class="hero-baslik">WuSoon'a Hoş Geldin</div>
+          <div class="hero-meta"><span style="color:var(--gri)">Kaynak ekleyerek başla</span></div>
+          <div class="hero-butonlar">
+            <button class="btn-oynat" onclick="sekmeDegistir('ayarlar')">▶ Başla</button>
+          </div>
+        </div>
+      </div>`;
+    return;
   }
-  document.getElementById('heroBaslik').textContent = rastgele.ad || 'WuSoon';
-  document.getElementById('heroPuan').textContent = rastgele.puan ? `⭐ ${rastgele.puan}` : rastgele.tip==='canli'?'🔴 CANLI':'';
-  document.getElementById('heroMeta2').textContent = [rastgele.yil, rastgele.grup].filter(Boolean).join(' · ');
-  document.getElementById('heroOynatBtn').onclick = () => detayAc(rastgele);
+  // 5 rastgele içerik seç
+  const karistir = [...havuz].sort(()=>Math.random()-.5);
+  heroItems = karistir.slice(0, Math.min(5, karistir.length));
+  heroIndex = 0;
+  heroRender();
+  // Otomatik geçiş
+  clearInterval(heroTimer);
+  heroTimer = setInterval(() => {
+    heroIndex = (heroIndex + 1) % heroItems.length;
+    heroSliderGit(heroIndex);
+  }, 5000);
+}
+
+function heroRender() {
+  const track = document.getElementById('heroTrack');
+  const dots  = document.getElementById('heroDots');
+  if(!track) return;
+
+  track.innerHTML = heroItems.map((item, i) => {
+    const sid = storeEkle(item);
+    const favAktif = favoriMi(item.url);
+    return `<div class="hero-item">
+      <div class="hero-bg" style="background-image:url('${item.logo}');background-size:cover;background-position:center;filter:brightness(.45);"></div>
+      <div class="hero-bg-overlay"></div>
+      <div class="hero-alti"></div>
+      ${item.logo ? `<img class="hero-kucuk-poster" src="${item.logo}" onerror="this.style.display='none'">` : ''}
+      <div class="hero-icerik">
+        <div class="hero-baslik">${item.ad||''}</div>
+        <div class="hero-meta">
+          ${item.puan?`<span class="hero-puan">⭐ ${item.puan}</span>`:''}
+          ${item.yil?`<span>${item.yil}</span>`:''}
+          <span class="hero-tip-rozet">${item.tip==='film'?'FİLM':'DİZİ'}</span>
+        </div>
+        <div class="hero-butonlar">
+          <button class="btn-oynat" onclick="${item.tip==='dizi'?`sezonSeciciAc('${sid}')`:`kartTikla('${sid}')`}">▶ Oynat</button>
+          <button class="btn-indir-hero" onclick="indirmeBaslat(storeAl('${sid}'))">⬇ İndir</button>
+          <button class="btn-fav-hero" data-url="${item.url.replace(/"/g,'&quot;')}" onclick="favoriToggle('${item.url.replace(/'/g,"\\'")}',storeAl('${sid}'))">${favAktif?'❤️':'🤍'}</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  dots.innerHTML = heroItems.map((_,i) =>
+    `<div class="hero-dot ${i===heroIndex?'aktif':''}" onclick="heroSliderGit(${i})"></div>`
+  ).join('');
+
+  heroSliderGit(heroIndex, false);
+
+  // Swipe desteği
+  let startX = 0;
+  track.parentElement.ontouchstart = e => startX = e.touches[0].clientX;
+  track.parentElement.ontouchend   = e => {
+    const diff = startX - e.changedTouches[0].clientX;
+    if(Math.abs(diff) > 50) {
+      heroIndex = diff > 0
+        ? (heroIndex+1) % heroItems.length
+        : (heroIndex-1+heroItems.length) % heroItems.length;
+      heroSliderGit(heroIndex);
+    }
+  };
+}
+
+function heroSliderGit(idx, animate=true) {
+  const track = document.getElementById('heroTrack');
+  if(!track) return;
+  if(!animate) track.style.transition = 'none';
+  else track.style.transition = 'transform .4s ease';
+  track.style.transform = `translateX(-${idx * 100}%)`;
+  document.querySelectorAll('.hero-dot').forEach((d,i) => d.classList.toggle('aktif', i===idx));
+  heroIndex = idx;
 }
 
 function anaSekmeGuncelle(ic) {
@@ -1555,7 +1721,12 @@ function anaSekmeGuncelle(ic) {
   const p = aktifProfil();
   // Son izlenenler
   const sonIz = p?.sonIzlenen || [];
-  if(sonIz.length > 0) html += kategoriHTML('🕐 Son İzlenenler', sonIz.slice(0,15), sonIz[0]?.tip||'film', sonIz);
+  const filmDevam = sonIz.filter(s=>s.tip==='film');
+  const diziDevam = sonIz.filter(s=>s.tip==='dizi');
+  if(filmDevam.length) html += kategoriHTML('▶ Filmleri İzlemeye Devam Et', filmDevam.slice(0,15), 'film', filmDevam);
+  if(diziDevam.length) html += kategoriHTML('▶ Dizileri İzlemeye Devam Et', diziDevam.slice(0,15), 'dizi', diziDevam);
+  
+  
   // Favoriler
   const favlar = profilFavoriler();
   if(favlar.length > 0) {
@@ -1566,6 +1737,23 @@ function anaSekmeGuncelle(ic) {
     if(filmF.length)  html += kategoriHTML('❤️ Favori Filmler',  filmF.slice(0,15),  'film',  filmF);
     if(diziF.length)  html += kategoriHTML('❤️ Favori Diziler',  diziF.slice(0,15),  'dizi',  diziF);
   }
+  
+  // Oynatma listeleri
+  const listeler = profilListeler();
+  listeler.forEach(l => {
+    if(l.icerikler.length > 0) {
+      const tip = l.icerikler[0]?.tip || 'film';
+      html += `<div class="kategori">
+        <div class="kategori-ust">
+          <div class="kategori-baslik">📋 ${l.ad}</div>
+          <button class="tumu-btn" style="color:var(--gri);" onclick="listeSilOnay(${l.id})">🗑 Sil</button>
+        </div>
+        <div class="kartlar">${l.icerikler.slice(0,15).map(i=>kartHTML(i,i.tip||tip)).join('')}</div>
+      </div>`;
+    }
+  });
+  
+  
   // Son eklenenler
   if(ic.canli.length) html += kategoriHTML('📺 Son Eklenen Kanallar', ic.canli.slice(0,15), 'canli', ic.canli);
   if(ic.film.length)  html += kategoriHTML('🎬 Son Eklenen Filmler',  ic.film.slice(0,15),  'film',  ic.film);
@@ -1591,6 +1779,7 @@ function kartHTML(item, tip) {
   const sid = storeEkle(item);
   const tikla = tip==='dizi' ? `sezonSeciciAc('${sid}')` : `kartTikla('${sid}')`;
   const favIkon = `<button class="fav-btn ${favoriMi(item.url)?'aktif':''}" data-url="${item.url.replace(/"/g,'&quot;')}" onclick="event.stopPropagation();favoriToggle('${item.url.replace(/'/g,"\\'")}',storeAl('${sid}'))">${favoriMi(item.url)?'❤️':'🤍'}</button>`;
+  const listeIkon = tip!=='canli' ? `<button class="liste-btn" onclick="event.stopPropagation();listeModalAc('${sid}')">+</button>` : '';
 
   if(tip==='canli'){
     return `<div class="kart kart-canli" onclick="${tikla}">
@@ -1599,6 +1788,7 @@ function kartHTML(item, tip) {
         <div class="kart-poster-placeholder" ${item.logo?'style="display:none"':''}>📺</div>
         <div class="canli-rozet"><div class="canli-nokta"></div>CANLI</div>
         ${favIkon}
+        ${listeIkon}
       </div>
       <div class="kart-baslik">${item.ad||''}</div>
     </div>`;
@@ -1609,6 +1799,7 @@ function kartHTML(item, tip) {
       ${item.logo?`<img src="${item.logo}" onerror="this.style.display='none';this.nextSibling.style.display='flex'" loading="lazy">`:''}
       <div class="kart-poster-placeholder" ${item.logo?'style="display:none"':''}>${emoji}</div>
       ${favIkon}
+        ${listeIkon}
     </div>
     <div class="kart-baslik">${item.ad||''}</div>
   </div>`;
@@ -2364,50 +2555,15 @@ function modalKapat(id, e) { if(e.target.id===id) modalKapatId(id); }
 
 
 // ═══════════════════════════════════════════
-// İNDİRME + ÇEVRİMDIŞI SİSTEM
+// İNDİRME SİSTEMİ
 // ═══════════════════════════════════════════
-const IDB_DB = 'wusoon_db';
-const IDB_ST = 'indirilenler';
-let db = null;
-
-function idbAc() {
-  return new Promise((res,rej) => {
-    if(db){ res(db); return; }
-    const r = indexedDB.open(IDB_DB, 1);
-    r.onupgradeneeded = e => { const d=e.target.result; if(!d.objectStoreNames.contains(IDB_ST)) d.createObjectStore(IDB_ST,{keyPath:'id'}); };
-    r.onsuccess = e => { db=e.target.result; res(db); };
-    r.onerror   = e => rej(e.target.error);
-  });
-}
-async function idbYazdir(k) {
-  const d=await idbAc();
-  return new Promise((res,rej)=>{ const tx=d.transaction(IDB_ST,'readwrite'); tx.objectStore(IDB_ST).put(k); tx.oncomplete=()=>res(); tx.onerror=e=>rej(e.target.error); });
-}
-async function idbListele() {
-  const d=await idbAc();
-  return new Promise((res,rej)=>{ const tx=d.transaction(IDB_ST,'readonly'); const r=tx.objectStore(IDB_ST).getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=e=>rej(e.target.error); });
-}
-async function idbSil(id) {
-  const d=await idbAc();
-  return new Promise((res,rej)=>{ const tx=d.transaction(IDB_ST,'readwrite'); tx.objectStore(IDB_ST).delete(id); tx.oncomplete=()=>res(); tx.onerror=e=>rej(e.target.error); });
-}
-
 let indirmeKuyrugu = [];
 let aktifIndirme = null;
 
-async function indirmeBaslat(item) {
-  if(!item||!item.url){ toast('❌ İndirme için URL yok.'); return; }
+function indirmeBaslat(item) {
+  if(!item) return;
   if(item.tip==='canli'){ toast('⚠️ Canlı kanallar indirilemez.'); return; }
-  if(indirmeKuyrugu.find(k=>k.url===item.url)){ toast('⏳ Zaten kuyruğa alındı.'); return; }
-  try {
-    const mevcut = await idbListele();
-    if(mevcut.find(m=>m.url===item.url)){ toast('✅ Zaten indirilmiş!'); return; }
-  } catch(e){}
-  const kayit = { id:Date.now()+'_'+Math.random().toString(36).slice(2), ad:item.ad||'İçerik', url:item.url, logo:item.logo||'', tip:item.tip||'film', grup:item.grup||'', durum:'bekliyor', ilerleme:0, boyut:0, tarih:Date.now() };
-  indirmeKuyrugu.push(kayit);
-  toast(`📥 "${item.ad}" kuyruğa eklendi`);
-  kuyrukGuncelle();
-  if(!aktifIndirme) siralamaIndirmeBaslat();
+  toast('📥 İndirme özelliği APK sürümünde aktif olacak.');
 }
 
 async function siralamaIndirmeBaslat() {
@@ -2418,117 +2574,50 @@ async function siralamaIndirmeBaslat() {
   kuyrukGuncelle();
   try {
     toast(`⬇ "${bekleyen.ad}" indiriliyor...`);
-    await videoIndir(bekleyen);
+    await nativeIndir(bekleyen);
     bekleyen.durum = 'tamamlandi';
     toast(`✅ "${bekleyen.ad}" indirildi!`);
   } catch(e) {
     bekleyen.durum = 'hata';
     bekleyen.hataMsg = e.message;
-    toast(`❌ İndirme hatası: ${e.message}`);
+    toast(`❌ ${e.message}`);
   } finally {
     aktifIndirme = null;
     kuyrukGuncelle();
-    indirilenSayisiGuncelle();
     setTimeout(siralamaIndirmeBaslat, 500);
   }
 }
 
-async function videoIndir(kayit) {
+async function nativeIndir(kayit) {
   let url = kayit.url;
-  if(/\.m3u8/i.test(url)) url = url.replace('.m3u8','.mp4');
-  const r = await fetch(url, { signal:AbortSignal.timeout(120000) });
-  if(!r.ok) throw new Error(`HTTP ${r.status}`);
-  const contentLength = r.headers.get('Content-Length');
-  const toplam = contentLength ? parseInt(contentLength) : 0;
-  const reader = r.body.getReader();
-  const chunks = [];
-  let alinan = 0;
-  while(true) {
-    const {done,value} = await reader.read();
-    if(done) break;
-    chunks.push(value); alinan+=value.length;
-    if(toplam>0){ kayit.ilerleme=Math.round((alinan/toplam)*100); kayit.boyut=alinan; kuyrukGuncelle(); }
-  }
-  const blob = new Blob(chunks,{type:'video/mp4'});
-  const ab = await blob.arrayBuffer();
-  await idbYazdir({ id:kayit.id, ad:kayit.ad, url:kayit.url, logo:kayit.logo, tip:kayit.tip, grup:kayit.grup, boyut:blob.size, tarih:Date.now(), videoData:ab, videoType:blob.type });
-  kayit.ilerleme=100; kayit.boyut=blob.size;
-}
-
-async function indirilenOynat(id) {
-  try {
-    const d = await idbAc();
-    const tx = d.transaction(IDB_ST,'readonly');
-    const r = tx.objectStore(IDB_ST).get(id);
-    r.onsuccess = () => {
-      const k = r.result;
-      if(!k){ toast('❌ Kayıt bulunamadı.'); return; }
-      const blob = new Blob([k.videoData],{type:k.videoType||'video/mp4'});
-      const url = URL.createObjectURL(blob);
-      modalKapatId('indirilenlerModal');
-      setTimeout(() => oynaticiAc({...k, url}), 200);
-    };
-  } catch(e){ toast('❌ '+e.message); }
-}
-
-async function indirilenSil(id) {
-  await idbSil(id);
-  indirilenlerGuncelle();
-  indirilenSayisiGuncelle();
-  toast('🗑 Silindi');
-}
-
-async function tumIndirilenlerSil() {
-  const liste = await idbListele();
-  for(const k of liste) await idbSil(k.id);
-  indirilenlerGuncelle();
-  indirilenSayisiGuncelle();
-  toast('🗑 Tüm indirilenler silindi');
+  if(/\.m3u8/i.test(url)) url = url.replace('.m3u8', '.mp4');
+  kayit.ilerleme = 50;
+  kuyrukGuncelle();
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (kayit.ad||'video').replace(/[^\w\s-]/g,'') + '.mp4';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  kayit.ilerleme = 100;
+  kuyrukGuncelle();
 }
 
 function boyutFmt(b) {
-  if(b<1024) return b+'B';
+  if(!b||b<1024) return '--';
   if(b<1048576) return (b/1024).toFixed(1)+'KB';
   if(b<1073741824) return (b/1048576).toFixed(1)+'MB';
   return (b/1073741824).toFixed(2)+'GB';
 }
 
-async function indirilenSayisiGuncelle() {
-  try {
-    const liste = await idbListele();
-    const boyut = liste.reduce((t,k)=>t+(k.boyut||0),0);
-    const el = document.getElementById('indirilenSayisi');
-    if(el) el.textContent = `${liste.length} içerik · ${boyutFmt(boyut)}`;
-  } catch(e){}
+function indirilenlerAc() { toast('İndirilenler telefon indirmeler klasöründe.'); }
+function indirilenSayisiGuncelle() {
+  const el = document.getElementById('indirilenSayisi');
+  if(el) el.textContent = 'Telefon indirmeler klasörü';
 }
-
-function indirilenlerAc() { modalAc('indirilenlerModal'); indirilenlerGuncelle(); }
-
-async function indirilenlerGuncelle() {
-  const liste = document.getElementById('indirilenlerListesi');
-  if(!liste) return;
-  try {
-    const kayitlar = await idbListele();
-    if(kayitlar.length===0){
-      liste.innerHTML=`<div class="bos-durum" style="padding:40px 20px;"><div class="bos-durum-ikon">📭</div><div class="bos-durum-baslik">İndirilmiş içerik yok</div><div class="bos-durum-alt">Detay ekranından "İndir" butonuna bas.</div></div>`;
-      return;
-    }
-    liste.innerHTML = kayitlar.map(k=>`
-      <div class="indir-item">
-        <div class="indir-poster">${k.logo?`<img src="${k.logo}" onerror="this.style.display='none'">`:(k.tip==='film'?'🎬':'🎭')}</div>
-        <div class="indir-bilgi">
-          <div class="indir-ad">${k.ad}</div>
-          <div class="indir-meta">${k.tip==='film'?'Film':'Dizi'} · ${boyutFmt(k.boyut||0)}</div>
-          <div class="indir-meta">${new Date(k.tarih).toLocaleDateString('tr-TR')}</div>
-        </div>
-        <div class="indir-sag">
-          <button class="indir-oynat-btn" onclick="indirilenOynat('${k.id}')">▶ Oynat</button>
-          <button class="indir-sil-btn" onclick="indirilenSil('${k.id}')">🗑</button>
-          <div class="indir-boyut">${boyutFmt(k.boyut||0)}</div>
-        </div>
-      </div>`).join('');
-  } catch(e){ liste.innerHTML=`<div style="padding:20px;color:var(--gri);text-align:center;">${e.message}</div>`; }
-}
+function tumIndirilenlerSil() { toast('Telefon indirmeler klasöründen silebilirsin.'); }
+function indirilenOynat() {}
 
 function indirmeKuyruguAc() { modalAc('kuyrukModal'); kuyrukGuncelle(); }
 
@@ -2542,17 +2631,16 @@ function kuyrukGuncelle() {
     liste.innerHTML=`<div class="bos-durum" style="padding:40px 20px;"><div class="bos-durum-ikon">📋</div><div class="bos-durum-baslik">Kuyruk boş</div></div>`;
     return;
   }
-  const renkler = {bekliyor:'var(--gri)',indiriliyor:'var(--kirmizi)',tamamlandi:'#46D369',hata:'#E50914'};
-  const yazılar = {bekliyor:'Bekliyor',indiriliyor:'İndiriliyor',tamamlandi:'Tamamlandı',hata:'Hata'};
+  const renkler={bekliyor:'var(--gri)',indiriliyor:'var(--kirmizi)',tamamlandi:'#46D369',hata:'#E50914'};
+  const yazılar={bekliyor:'Bekliyor',indiriliyor:'İndiriliyor...',tamamlandi:'Tamamlandı ✓',hata:'Hata'};
   liste.innerHTML = indirmeKuyrugu.map(k=>`
     <div class="indir-item">
       <div class="indir-poster">${k.tip==='film'?'🎬':'🎭'}</div>
       <div class="indir-bilgi">
         <div class="indir-ad">${k.ad}</div>
         <div class="indir-meta" style="color:${renkler[k.durum]||'var(--gri)'};">${yazılar[k.durum]||k.durum}${k.hataMsg?' — '+k.hataMsg:''}</div>
-        ${k.durum==='indiriliyor'?`<div class="indir-ilerleme-bar"><div class="indir-ilerleme-ic" style="width:${k.ilerleme}%"></div></div><div class="indir-yuzde">${k.ilerleme}% · ${boyutFmt(k.boyut)}</div>`:''}
+        ${k.durum==='indiriliyor'?`<div class="indir-ilerleme-bar"><div class="indir-ilerleme-ic" style="width:${k.ilerleme}%"></div></div>`:''}
       </div>
-      <div class="indir-sag"><div class="indir-boyut">${k.ilerleme>0?k.ilerleme+'%':''}</div></div>
     </div>`).join('');
 }
 
